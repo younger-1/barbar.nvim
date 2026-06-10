@@ -130,6 +130,13 @@ local highlight = {}
 --- Setup the highlight groups for this plugin.
 --- @return nil
 function highlight.setup()
+  -- Source colors from the live highlight definitions, not a stale snapshot. The
+  -- cache persists between calls and across the deferred `icons.set_highlights`,
+  -- so without this the `Buffer*` groups can be built from colors captured before
+  -- the colorscheme finished applying (e.g. `BufferDefaultCurrent` ends up with no
+  -- background).
+  hl.reset_cache()
+
   local preset = config.options.icons.preset
 
   local fg_target = {cterm = 'red', gui = 'red'} --- @type barbar.utils.hl.color
@@ -310,12 +317,11 @@ function highlight.setup()
   icons.set_highlights()
 end
 
---- Calls resets the highlight cache and then sets up highlighting.
+--- Re-sets up highlighting. Kept as a distinct entry point for the autocmds that
+--- react to colorscheme/background changes.
 ---
---- @see barbar.utils.Hl.reset_cache for details on the cache reset
---- @see barbar.Highlight.setup for details on setting up highlights
+--- @see barbar.Highlight.setup which now resets the highlight cache itself
 function highlight.resetup()
-  hl.reset_cache()
   highlight.setup()
 end
 

@@ -91,6 +91,12 @@ icons.get_icon = ok and
 --- Re-highlight all of the groups which have been set before. Checks for updated highlight groups.
 --- @return nil
 icons.set_highlights = vim.schedule_wrap(function()
+  -- NOTE: this runs deferred (`schedule_wrap`), potentially after the colorscheme
+  -- finished applying. Drop the cached `nvim_get_hl` definitions first so icon
+  -- backgrounds are sourced from the live `Buffer*` groups instead of a snapshot
+  -- taken too early -- otherwise a stale `none` gets frozen into the icon group
+  -- (it is only ever created once, guarded by `hlexists`).
+  hl.reset_cache()
   for _, group in ipairs(hl_groups) do
     hl_buffer_icon(group.buffer_status, group.icon_hl)
   end
