@@ -231,12 +231,20 @@ function events.enable()
   )
 
   create_autocmd('DiagnosticChanged', {
-    callback = function(event)
+    -- NOTE: scheduled on purpose. `DiagnosticChanged` is dispatched as a buffer-scoped
+    -- autocmd (`{buffer = event.buf}`), so Neovim runs this callback with `event.buf`
+    -- temporarily set as the current buffer (`aucmd_prepbuf`). Rendering synchronously here
+    -- would make `nvim_get_current_buf()` report the diagnostic's buffer rather than the
+    -- actually-focused one, painting the wrong tab as active. This is especially visible when
+    -- another plugin (e.g. coc.nvim) calls `vim.diagnostic.reset()`/`set()` during a buffer
+    -- switch, firing `DiagnosticChanged` for many buffers in a row -> flicker. Deferring lets
+    -- the buffer context unwind first.
+    callback = vim.schedule_wrap(function(event)
       if vim.api.nvim_buf_is_loaded(event.buf) then
         state.update_diagnostics(event.buf)
         render.update()
       end
-    end,
+    end),
     group = augroup_render,
   })
 
